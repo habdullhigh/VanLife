@@ -1,0 +1,147 @@
+@VanLife.Api_HostAddress = https://localhost:7250
+
+### Vans - get all (no filters)
+GET {{VanLife.Api_HostAddress}}/api/vans
+Accept: application/json
+
+### Vans - get all (category filter: Simple)
+GET {{VanLife.Api_HostAddress}}/api/vans?category=Simple
+Accept: application/json
+
+### Vans - get all (category filter: Luxury + price range)
+GET {{VanLife.Api_HostAddress}}/api/vans?category=Luxury&minPrice=100&maxPrice=250
+Accept: application/json
+
+### Vans - get one by id
+# 1) Run a "get all" request first
+# 2) Copy a van "id" and paste it below
+@VanId = 73a10d33-7da4-4f0a-b58d-0d0efc5e70e3000
+GET {{VanLife.Api_HostAddress}}/api/vans/{{VanId}}
+Accept: application/json
+
+### Rent a van (days query)
+POST {{VanLife.Api_HostAddress}}/api/vans/{{VanId}}/rent?days=3
+Accept: application/json
+
+###
+### Auth - sign up (choose Buyer/Seller/Admin)
+POST {{VanLife.Api_HostAddress}}/api/auth/signup
+Content-Type: application/json
+Accept: application/json
+
+{
+  "firstName": "Daisy",
+  "lastName": "Sophia",
+  "email": "daisy@example.com",
+  "password": "Password123!",
+  "confirmPassword": "Password123!",
+  "role": "Buyer"
+}
+
+### Auth - buyer login
+POST {{VanLife.Api_HostAddress}}/api/auth/login/buyer
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "buyer@vanlife.com",
+  "password": "Buyer123!"
+}
+
+### Auth - seller login
+POST {{VanLife.Api_HostAddress}}/api/auth/login/seller
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "seller@vanlife.com",
+  "password": "Seller123!"
+}
+
+### Auth - admin login
+POST {{VanLife.Api_HostAddress}}/api/auth/login/admin
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "admin@vanlife.com",
+  "password": "Admin123!"
+}
+
+### Auth - forgot password
+POST {{VanLife.Api_HostAddress}}/api/auth/forgot-password
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "buyer@vanlife.com"
+}
+
+### Auth - reset password
+POST {{VanLife.Api_HostAddress}}/api/auth/reset-password
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "buyer@vanlife.com",
+  "newPassword": "NewBuyer123!",
+  "confirmPassword": "NewBuyer123!"
+}
+
+###
+### Seller dashboard
+@SellerId = 2cb91a52-42b5-4f59-9f3a-a96925f90488
+
+### Seller - get seller vans (not all)
+GET {{VanLife.Api_HostAddress}}/api/seller/{{SellerId}}/dashboard/vans
+Accept: application/json
+
+### Seller - income (optional days filter)
+GET {{VanLife.Api_HostAddress}}/api/seller/{{SellerId}}/dashboard/income?days=30
+Accept: application/json
+
+### Seller - specific van management view (visibility/pricing/photos)
+GET {{VanLife.Api_HostAddress}}/api/seller/vans/{{VanId}}
+Accept: application/json
+
+###
+### Reviews (seller/buyer)
+@UserId = {{SellerId}}
+
+### Reviews - all for user
+GET {{VanLife.Api_HostAddress}}/api/reviews/users/{{UserId}}
+Accept: application/json
+
+### Reviews - date filter + type filter
+GET {{VanLife.Api_HostAddress}}/api/reviews/users/{{UserId}}?startDate=2026-01-01&endDate=2026-12-31&reviewType=Positive
+Accept: application/json
+
+###
+### Finance
+### Income graph (year filter)
+GET {{VanLife.Api_HostAddress}}/api/finance/income-graph?year=2026
+Accept: application/json
+
+### Transactions (days filter)
+GET {{VanLife.Api_HostAddress}}/api/finance/transactions?days=14
+Accept: application/json
+
+###
+### Images
+### Upload (fake URL returned; no actual file upload in this beginner version)
+POST {{VanLife.Api_HostAddress}}/api/images/upload?fileName=van-photo.jpg
+Accept: application/json
+
+### List uploaded images
+GET {{VanLife.Api_HostAddress}}/api/images
+Accept: application/json
+
+### Delete image by id
+@ImageId = 00000000-0000-0000-0000-000000000000
+DELETE {{VanLife.Api_HostAddress}}/api/images/{{ImageId}}
+Accept: application/json
+
+###
+### 404 test (any unknown endpoint)
+GET {{VanLife.Api_HostAddress}}/this-does-not-exist
+Accept: application/json
