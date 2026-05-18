@@ -4,8 +4,17 @@ using VanLife.Api.Models;
 
 namespace VanLife.Api.Services;
 
-public class VanService(AppDbContext db)
+public class VanService
 {
+    private readonly AppDbContext db;
+    private readonly IPaymentService payments;
+
+    public VanService(AppDbContext db, IPaymentService payments)
+    {
+        this.db = db;
+        this.payments = payments;
+    }
+
     public async Task<PagedResult<VanListItemDto>> GetAll(VanQuery query)
     {
         var vans = db.Vans.AsQueryable();
@@ -207,6 +216,17 @@ public class VanService(AppDbContext db)
             return new { success = false, message = "Days must be at least 1." };
         }
 
+        // Date-based availability: use today as start date and compute end date
+        var start = DateTime.UtcNow.Date;
+        var end = start.AddDays(request.Days - 1);
+
+        // Ensure no overlapping rentals exist for the van in the requested period
+        var overlapping = await db.Rentals.AnyAsync(r => r.VanId == vanId && !(r.EndDate < start || r.StartDate > end));
+        if (overlapping)
+        {
+            return new { success = false, message = "Van is already rented for the requested dates." };
+        }
+
         // Payment and caution checks (placeholder - integrate with gateway in production)
         if (string.IsNullOrWhiteSpace(request.PaymentToken))
         {
@@ -221,6 +241,13 @@ public class VanService(AppDbContext db)
         var rentFee = van.PricePerDay * request.Days;
         var totalDue = rentFee + request.CautionFee;
 
+        // Charge payment using payment service
+        var charged = await payments.ChargeAsync(request.PaymentToken, totalDue);
+        if (!charged)
+        {
+            return new { success = false, message = "Payment failed." };
+        }
+
         // Deduct availability
         van.NumberAvailable -= 1;
         van.IsAvailable = van.NumberAvailable > 0;
@@ -231,7 +258,14 @@ public class VanService(AppDbContext db)
             SellerId = van.SellerId,
             BuyerId = buyer.Id,
             VanId = van.Id,
-            PurchasedAt = DateTime.UtcNow
+            PurchasedAt = DateTime.UtcNow,
+            Days = request.Days,
+            Destination = request.Destination,
+            Contact = request.Contact,
+            CautionFee = request.CautionFee,
+            TotalPaid = totalDue,
+            StartDate = start,
+            EndDate = end
         });
 
         db.Transactions.Add(new Transaction

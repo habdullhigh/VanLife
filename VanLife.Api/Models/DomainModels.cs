@@ -115,6 +115,27 @@ public class Rental
     public Buyer? Buyer { get; set; }
     public Guid VanId { get; set; }
     public Van? Van { get; set; }
+    // When the rental was created / purchased
     public DateTime PurchasedAt { get; set; }
+
+    // Expanded rental details
+    // Number of days the van was rented for
+    public int Days { get; set; }
+
+    // Optional destination provided by renter
+    public string? Destination { get; set; }
+
+    // Contact information used for this rental
+    public string? Contact { get; set; }
+
+    // Caution / deposit fee provided by renter
+    public decimal CautionFee { get; set; }
+
+    // Total amount paid for this rental (rent + caution)
+    public decimal TotalPaid { get; set; }
+
+    // Rental period start and end (inclusive)
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
 }
 

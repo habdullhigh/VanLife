@@ -1,24 +1,44 @@
 using Microsoft.EntityFrameworkCore;
 using VanLife.Api.Data;
 using VanLife.Api.Models;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 
 namespace VanLife.Api.Services;
 
-public class ImageService(AppDbContext db)
+public class ImageService
 {
-    public async Task<ImageAsset> Upload(string fileName, Guid? vanId = null)
+    private readonly AppDbContext db;
+    private readonly IWebHostEnvironment env;
+
+    public ImageService(AppDbContext db, IWebHostEnvironment env)
     {
+        this.db = db;
+        this.env = env;
+    }
+
+    public async Task<ImageAsset> Upload(IFormFile file, Guid? vanId = null)
+    {
+        var uploads = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images");
+        Directory.CreateDirectory(uploads);
+        var fileName = $"{Guid.NewGuid():N}-{Path.GetFileName(file.FileName)}";
+        var filePath = Path.Combine(uploads, fileName);
+        await using var stream = File.Create(filePath);
+        await file.CopyToAsync(stream);
+
+        var url = $"/images/{fileName}"; // served by static files
+
         var image = new ImageAsset
         {
             Id = Guid.NewGuid(),
             VanId = vanId,
-            FileName = fileName,
-            Url = $"https://cdn.vanlife.fake/images/{Guid.NewGuid():N}-{fileName}",
+            FileName = file.FileName,
+            Url = url,
             UploadedAt = DateTime.UtcNow
         };
 
         db.Images.Add(image);
-        //await db.SaveChangesAsync();
+        await db.SaveChangesAsync();
         return image;
     }
 
@@ -48,6 +68,17 @@ public class ImageService(AppDbContext db)
         {
             return false;
         }
+
+        // attempt to delete file on disk if stored locally
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(image.Url) && image.Url.StartsWith("/images/"))
+            {
+                var filePath = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), image.Url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (File.Exists(filePath)) File.Delete(filePath);
+            }
+        }
+        catch { /* best-effort */ }
 
         db.Images.Remove(image);
         await db.SaveChangesAsync();

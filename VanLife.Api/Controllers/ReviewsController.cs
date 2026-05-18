@@ -13,5 +13,17 @@ public class ReviewsController(ReviewService reviewService) : ControllerBase
     {
         return Ok(await reviewService.GetUserReviews(query));
     }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateReview([FromBody] CreateReviewRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var result = await reviewService.CreateReview(request);
+        return result.Success ? Created(string.Empty, result) : BadRequest(result);
+    }
 }
 

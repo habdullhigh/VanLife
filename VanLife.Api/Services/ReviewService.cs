@@ -64,5 +64,26 @@ public class ReviewService(AppDbContext db)
             items = pageItems.Select(r => new { r.Id, r.Date, r.Type, r.Stars, r.Comment })
         };
     }
+
+    public async Task<OperationResult> CreateReview(CreateReviewRequest request)
+    {
+        // minimal validation: ensure target user exists
+        var target = await db.Users.AnyAsync(u => u.Id == request.TargetUserId);
+        if (!target) return new OperationResult(false, "Target user not found.");
+
+        var review = new Review
+        {
+            Id = Guid.NewGuid(),
+            TargetUserId = request.TargetUserId,
+            Type = request.Type,
+            Stars = request.Stars,
+            Comment = request.Comment ?? string.Empty,
+            Date = DateTime.UtcNow
+        };
+
+        db.Reviews.Add(review);
+        await db.SaveChangesAsync();
+        return new OperationResult(true, "Review created.");
+    }
 }
 

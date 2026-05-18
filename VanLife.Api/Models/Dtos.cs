@@ -46,15 +46,40 @@ public class VanQuery : PaginationQuery
 public class RentRequest
 {
     // Number of days user intends to rent
+    [Range(1, 365)]
     public int Days { get; set; } = 1;
     // Optional destination for emergency contact purposes
     public string? Destination { get; set; }
     // Renter contact info (phone or alternative)
+    [Required]
     public string Contact { get; set; } = string.Empty;
     // Payment token or method identifier (in production integrate with payment gateway)
+    [Required]
     public string PaymentToken { get; set; } = string.Empty;
     // Caution fee amount provided by renter
     public decimal CautionFee { get; set; }
+}
+
+public class RentalHistoryItemDto
+{
+    public Guid PurchaseId { get; set; }
+    public Guid VanId { get; set; }
+    public Guid SellerId { get; set; }
+    public DateTime PurchasedAt { get; set; }
+    public int Days { get; set; }
+    public decimal TotalPaid { get; set; }
+    public string? Destination { get; set; }
+}
+
+public class CreateReviewRequest
+{
+    [Required]
+    public Guid TargetUserId { get; set; }
+    [Required]
+    public ReviewType Type { get; set; }
+    [Range(1,5)]
+    public int Stars { get; set; }
+    public string? Comment { get; set; }
 }
 
 public class ReviewQuery : PaginationQuery

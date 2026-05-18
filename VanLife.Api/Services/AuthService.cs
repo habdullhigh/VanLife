@@ -4,7 +4,7 @@ using VanLife.Api.Models;
 
 namespace VanLife.Api.Services;
 
-public class AuthService(AppDbContext db)
+public class AuthService(AppDbContext db, JwtTokenService jwtTokenService)
 {
     public async Task<object> SignUp(SignUpRequest request)
     {
@@ -30,11 +30,21 @@ public class AuthService(AppDbContext db)
             Phone = request.Phone,
             NextOfKin = request.NextOfKin,
             Email = request.Email,
-            Password = request.Password,
+            Password = PasswordHasher.Hash(request.Password),
             Role = request.Role
         };
 
         db.Users.Add(user);
+
+        if (request.Role == UserRole.Seller)
+        {
+            db.Sellers.Add(new Seller { SellerId = user.Id, Username = user.Username });
+        }
+        else if (request.Role == UserRole.Buyer)
+        {
+            db.Buyers.Add(new Buyer { BuyerId = user.Id, Username = user.Username });
+        }
+
         await db.SaveChangesAsync();
         return new { success = true, message = "Account created.", userId = user.Id };
     }
@@ -43,18 +53,20 @@ public class AuthService(AppDbContext db)
     {
         var user = await db.Users.FirstOrDefaultAsync(u =>
             u.Email.ToLower() == request.Email.ToLower() &&
-            u.Password == request.Password &&
-            (u.Role == request.Role));
+            u.Role == request.Role);
 
-        if (user is null)
+        if (user is null || !PasswordHasher.Verify(request.Password, user.Password))
         {
             return new { success = false, message = "Invalid credentials for this login type." };
         }
+
+        var token = jwtTokenService.GenerateToken(user);
 
         return new
         {
             success = true,
             message = $"{request.Role} login successful.",
+            token,
             user = new { user.Id, user.FirstName, user.LastName, user.Email, user.Role }
         };
     }
@@ -89,9 +101,8 @@ public class AuthService(AppDbContext db)
             return new { success = false, message = "Email not found." };
         }
 
-        user.Password = request.NewPassword;
+        user.Password = PasswordHasher.Hash(request.NewPassword);
         await db.SaveChangesAsync();
         return new { success = true, message = "Password has been reset." };
     }
 }
-
