@@ -52,15 +52,8 @@ Accept: application/json
 
 
 
-{
-
-  "email": "buyer@vanlife.com",
-
-  "password": "Buyer123!",
-
-  "role": "Buyer"
-
-}
+GET {{VanLifeApi_HostAddress}}/api/vans?page=1&pageSize=5
+Accept: application/json
 
 
 
@@ -92,7 +85,7 @@ Accept: application/json
 
 
 
-### Van management details (seller JWT required)
+### Van management details (seller only - pass sellerId)
 
 GET {{VanLifeApi_HostAddress}}/api/vans/{{VanId}}/management?sellerId={{SellerId}}
 
@@ -252,7 +245,7 @@ Accept: application/json
 
 
 
-### Rent van (buyer JWT required)
+### Rent van (buyer only - pass buyerId)
 
 POST {{VanLifeApi_HostAddress}}/api/vans/{{VanId}}/rent?buyerId={{BuyerId}}
 
@@ -318,11 +311,16 @@ Accept: application/json
 
 ### Images
 
-### Upload (seller JWT required)
+### Upload (multipart form data)
 
-POST {{VanLifeApi_HostAddress}}/api/images/upload?fileName=van-photo.jpg&vanId={{VanId}}&sellerId={{SellerId}}
+POST {{VanLifeApi_HostAddress}}/api/images/upload
 
-Accept: application/json
+# file: path to local image file
+# vanId: optional van GUID
+
+# Example: upload file named 'photo.jpg' with optional vanId
+# Content-Type: multipart/form-data; boundary=----FormBoundary
+# (REST Client will auto-generate multipart boundary)
 
 
 
@@ -336,7 +334,7 @@ Accept: application/json
 
 ### Delete image (copy ImageId from list)
 
-DELETE {{VanLifeApi_HostAddress}}/api/images/{{ImageId}}?sellerId={{SellerId}}
+DELETE {{VanLifeApi_HostAddress}}/api/images/{{ImageId}}
 
 Accept: application/json
 
