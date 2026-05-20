@@ -9,7 +9,7 @@ namespace VanLife.Api.Controllers;
 [Route("api/images")]
 public class ImagesController(ImageService imageService) : ControllerBase
 {
-    [Authorize(Roles = nameof(UserRole.Seller))]
+    [AllowAnonymous]
     [HttpPost("upload")]
     public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] Guid? vanId)
     {
@@ -23,7 +23,6 @@ public class ImagesController(ImageService imageService) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] PaginationQuery query) => Ok(await imageService.GetAll(query));
 
-    [Authorize(Roles = nameof(UserRole.Seller))]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

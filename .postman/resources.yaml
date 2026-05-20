@@ -5,3 +5,4 @@ workspace:
 localResources:
   specs:
     - ..\VanLife.Api\obj\Debug\net10.0\EndpointInfo\VanLife.Api.json
+    - ..\VanLife.Api\obj\Debug\net8.0\EndpointInfo\VanLife.Api.json

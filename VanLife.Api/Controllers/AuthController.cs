@@ -7,6 +7,7 @@ namespace VanLife.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
+[Consumes("application/json")]
 public class AuthController(AuthService authService) : ControllerBase
 {
     [AllowAnonymous]

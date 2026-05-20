@@ -1,4 +1,4 @@
-@VanLife.Api_HostAddress = https://localhost:7250
+@VanLifeApi_HostAddress = http://localhost:5062
 
 @SellerId = 2cb91a52-42b5-4f59-9f3a-a96925f90488
 
@@ -10,9 +10,9 @@
 
 @ImageId = 00000000-0000-0000-0000-000000000000
 
-@SellerToken = paste-seller-token-here
+@SellerToken = 2cb91a52-42b5-4f59-9f3a-a96925f90488
 
-@BuyerToken = paste-buyer-token-here
+@BuyerToken = 73a10d33-7da4-4f0a-b58d-0d0efc5e70e3
 
 
 
@@ -20,7 +20,7 @@
 
 # @name sellerLogin
 
-POST {{VanLife.Api_HostAddress}}/api/auth/login
+POST {{VanLifeApi_HostAddress}}/api/auth/login
 
 Content-Type: application/json
 
@@ -44,7 +44,7 @@ Accept: application/json
 
 # @name buyerLogin
 
-POST {{VanLife.Api_HostAddress}}/api/auth/login
+POST {{VanLifeApi_HostAddress}}/api/auth/login
 
 Content-Type: application/json
 
@@ -66,7 +66,7 @@ Accept: application/json
 
 ### Vans (shared filters + pagination + skip)
 
-GET {{VanLife.Api_HostAddress}}/api/vans?page=1&pageSize=5&skip=0&category=Luxury&minPrice=50&maxPrice=300
+GET {{VanLifeApi_HostAddress}}/api/vans?page=1&pageSize=5&skip=0&category=Luxury&minPrice=50&maxPrice=300
 
 Accept: application/json
 
@@ -74,7 +74,7 @@ Accept: application/json
 
 ### Search vans (reuse list endpoint with query param)
 
-GET {{VanLife.Api_HostAddress}}/api/vans?query=luxury+solar&page=1&pageSize=10
+GET {{VanLifeApi_HostAddress}}/api/vans?query=luxury+solar&page=1&pageSize=10
 
 Accept: application/json
 
@@ -86,7 +86,7 @@ Accept: application/json
 
 @VanId = fa070bb9-47e9-4d40-b0dd-e2d387238899
 
-GET {{VanLife.Api_HostAddress}}/api/vans/{{VanId}}
+GET {{VanLifeApi_HostAddress}}/api/vans/{{VanId}}
 
 Accept: application/json
 
@@ -94,9 +94,7 @@ Accept: application/json
 
 ### Van management details (seller JWT required)
 
-GET {{VanLife.Api_HostAddress}}/api/vans/{{VanId}}/management
-
-Authorization: Bearer {{SellerToken}}
+GET {{VanLifeApi_HostAddress}}/api/vans/{{VanId}}/management?sellerId={{SellerId}}
 
 Accept: application/json
 
@@ -104,9 +102,7 @@ Accept: application/json
 
 ### Seller - list inventory
 
-GET {{VanLife.Api_HostAddress}}/api/vans/seller/vans?page=1&pageSize=10
-
-Authorization: Bearer {{SellerToken}}
+GET {{VanLifeApi_HostAddress}}/api/vans/seller/vans?sellerId={{SellerId}}&page=1&pageSize=10
 
 Accept: application/json
 
@@ -114,11 +110,9 @@ Accept: application/json
 
 ### Seller - create a new van
 
-POST {{VanLife.Api_HostAddress}}/api/vans/seller/vans
+POST {{VanLifeApi_HostAddress}}/api/vans/seller/vans?sellerId={{SellerId}}
 
 Content-Type: application/json
-
-Authorization: Bearer {{SellerToken}}
 
 Accept: application/json
 
@@ -142,11 +136,9 @@ Accept: application/json
 
 ### Seller - update a van
 
-PUT {{VanLife.Api_HostAddress}}/api/vans/seller/vans/{{VanId}}
+PUT {{VanLifeApi_HostAddress}}/api/vans/seller/vans/{{VanId}}?sellerId={{SellerId}}
 
 Content-Type: application/json
-
-Authorization: Bearer {{SellerToken}}
 
 Accept: application/json
 
@@ -164,11 +156,9 @@ Accept: application/json
 
 ### Seller - toggle availability / set inventory
 
-PATCH {{VanLife.Api_HostAddress}}/api/vans/seller/vans/{{VanId}}/availability
+PATCH {{VanLifeApi_HostAddress}}/api/vans/seller/vans/{{VanId}}/availability?sellerId={{SellerId}}
 
 Content-Type: application/json
-
-Authorization: Bearer {{SellerToken}}
 
 Accept: application/json
 
@@ -186,7 +176,7 @@ Accept: application/json
 
 ### Auth - sign up
 
-POST {{VanLife.Api_HostAddress}}/api/auth/signup
+POST {{VanLifeApi_HostAddress}}/api/auth/signup
 
 Content-Type: application/json
 
@@ -224,7 +214,7 @@ Accept: application/json
 
 ### Auth - forgot password
 
-POST {{VanLife.Api_HostAddress}}/api/auth/forgot-password
+POST {{VanLifeApi_HostAddress}}/api/auth/forgot-password
 
 Content-Type: application/json
 
@@ -242,7 +232,7 @@ Accept: application/json
 
 ### Auth - reset password
 
-POST {{VanLife.Api_HostAddress}}/api/auth/reset-password
+POST {{VanLifeApi_HostAddress}}/api/auth/reset-password
 
 Content-Type: application/json
 
@@ -264,11 +254,9 @@ Accept: application/json
 
 ### Rent van (buyer JWT required)
 
-POST {{VanLife.Api_HostAddress}}/api/vans/{{VanId}}/rent
+POST {{VanLifeApi_HostAddress}}/api/vans/{{VanId}}/rent?buyerId={{BuyerId}}
 
 Content-Type: application/json
-
-Authorization: Bearer {{BuyerToken}}
 
 Accept: application/json
 
@@ -294,9 +282,7 @@ Accept: application/json
 
 ### Dashboard - seller summary (vans + transactions)
 
-GET {{VanLife.Api_HostAddress}}/api/dashboard/sellers/{{SellerId}}?page=1&pageSize=5&skip=0&days=30
-
-Authorization: Bearer {{SellerToken}}
+GET {{VanLifeApi_HostAddress}}/api/dashboard/sellers/{{SellerId}}?page=1&pageSize=5&skip=0&days=30
 
 Accept: application/json
 
@@ -304,9 +290,7 @@ Accept: application/json
 
 ### Dashboard - income graph
 
-GET {{VanLife.Api_HostAddress}}/api/dashboard/income-graph?year=2026&sellerId={{SellerId}}
-
-Authorization: Bearer {{SellerToken}}
+GET {{VanLifeApi_HostAddress}}/api/dashboard/income-graph?year=2026&sellerId={{SellerId}}
 
 Accept: application/json
 
@@ -314,9 +298,7 @@ Accept: application/json
 
 ### Dashboard - transactions (shared filters + pagination + skip)
 
-GET {{VanLife.Api_HostAddress}}/api/dashboard/transactions?page=1&pageSize=5&skip=0&days=14&minPrice=100
-
-Authorization: Bearer {{SellerToken}}
+GET {{VanLifeApi_HostAddress}}/api/dashboard/transactions?page=1&pageSize=5&skip=0&days=14&minPrice=100
 
 Accept: application/json
 
@@ -326,7 +308,7 @@ Accept: application/json
 
 ### Reviews (shared filters + pagination + skip)
 
-GET {{VanLife.Api_HostAddress}}/api/reviews?userId={{UserId}}&page=1&pageSize=5&skip=0&startDate=2026-01-01&endDate=2026-12-31&reviewType=Positive
+GET {{VanLifeApi_HostAddress}}/api/reviews?userId={{UserId}}&page=1&pageSize=5&skip=0&startDate=2026-01-01&endDate=2026-12-31&reviewType=Positive
 
 Accept: application/json
 
@@ -338,9 +320,7 @@ Accept: application/json
 
 ### Upload (seller JWT required)
 
-POST {{VanLife.Api_HostAddress}}/api/images/upload?fileName=van-photo.jpg&vanId={{VanId}}
-
-Authorization: Bearer {{SellerToken}}
+POST {{VanLifeApi_HostAddress}}/api/images/upload?fileName=van-photo.jpg&vanId={{VanId}}&sellerId={{SellerId}}
 
 Accept: application/json
 
@@ -348,7 +328,7 @@ Accept: application/json
 
 ### List images (pagination + skip)
 
-GET {{VanLife.Api_HostAddress}}/api/images?page=1&pageSize=10&skip=0
+GET {{VanLifeApi_HostAddress}}/api/images?page=1&pageSize=10&skip=0
 
 Accept: application/json
 
@@ -356,9 +336,7 @@ Accept: application/json
 
 ### Delete image (copy ImageId from list)
 
-DELETE {{VanLife.Api_HostAddress}}/api/images/{{ImageId}}
-
-Authorization: Bearer {{SellerToken}}
+DELETE {{VanLifeApi_HostAddress}}/api/images/{{ImageId}}?sellerId={{SellerId}}
 
 Accept: application/json
 
@@ -368,7 +346,7 @@ Accept: application/json
 
 ### 404 test
 
-GET {{VanLife.Api_HostAddress}}/this-does-not-exist
+GET {{VanLifeApi_HostAddress}}/this-does-not-exist
 
 Accept: application/json
 

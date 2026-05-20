@@ -16,14 +16,12 @@ public class RentalsController : ControllerBase
         this.rentalService = rentalService;
     }
 
-    [Authorize(Roles = nameof(VanLife.Api.Models.UserRole.Buyer))]
     [HttpGet("me")]
-    public async Task<IActionResult> GetMyRentals([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] int skip = 0)
+    public async Task<IActionResult> GetMyRentals([FromQuery] Guid buyerId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] int skip = 0)
     {
-        var userId = User.GetUserId();
-        if (userId is null) return Unauthorized(new { message = "Invalid token." });
+        if (buyerId == Guid.Empty) return BadRequest(new { message = "buyerId is required when authentication is disabled." });
 
-        var items = await rentalService.GetBuyerHistory(userId.Value, page, pageSize, skip);
+        var items = await rentalService.GetBuyerHistory(buyerId, page, pageSize, skip);
         return Ok(items);
     }
 }
