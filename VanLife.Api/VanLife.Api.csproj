@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>VanLife.Api-5f1a8b2f-8f9a-4ad9-8b4b-3a4d1c9c9c6e</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
