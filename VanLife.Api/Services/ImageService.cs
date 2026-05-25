@@ -17,11 +17,12 @@ public class ImageService
         this.env = env;
     }
 
-    public async Task<ImageAsset> Upload(IFormFile file, Guid? vanId = null)
+    public async Task<ImageAsset> Upload(IFormFile file, Guid? vanId = null, string? fileNameHint = null)
     {
         var uploads = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images");
         Directory.CreateDirectory(uploads);
-        var fileName = $"{Guid.NewGuid():N}-{Path.GetFileName(file.FileName)}";
+        var safeName = !string.IsNullOrWhiteSpace(fileNameHint) ? Path.GetFileName(fileNameHint) : Path.GetFileName(file.FileName);
+        var fileName = $"{Guid.NewGuid():N}-{safeName}";
         var filePath = Path.Combine(uploads, fileName);
         await using var stream = File.Create(filePath);
         await file.CopyToAsync(stream);
@@ -32,7 +33,7 @@ public class ImageService
         {
             Id = Guid.NewGuid(),
             VanId = vanId,
-            FileName = file.FileName,
+            FileName = safeName,
             Url = url,
             UploadedAt = DateTime.UtcNow
         };
