@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VanLife.Api.Extensions;
-using VanLife.Api.Data;
 using VanLife.Api.Models;
 using VanLife.Api.Services;
 
@@ -10,7 +9,7 @@ namespace VanLife.Api.Controllers;
 [ApiController]
 [Authorize(Roles = nameof(UserRole.Seller))]
 [Route("api/dashboard")]
-public class DashboardController(DashboardService dashboardService, IncomeService incomeService, AppDbContext db) : ControllerBase
+public class DashboardController(DashboardService dashboardService, IncomeService incomeService) : ControllerBase
 {
     [HttpGet("sellers/{sellerId:guid}")]
     public async Task<IActionResult> GetSellerSummary(

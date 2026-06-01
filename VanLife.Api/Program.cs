@@ -1,18 +1,14 @@
 using System.Text;
-using System.Diagnostics;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Mvc;
 using VanLife.Api.Data;
+using VanLife.Api.Data.Repositories;
 using VanLife.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-
-if (builder.Environment.IsDevelopment())
-{
-    builder.Configuration.AddUserSecrets<Program>();
-}
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -29,7 +25,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Enter 'Bearer' [space] and then your valid token in the text input below."
+        Description = "Enter a valid JWT token."
     });
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -47,18 +43,15 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Jwt configuration
-var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured. Use user-secrets or environment variable.");
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException("Jwt:Key is not configured.");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "VanLife.Api";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "VanLife.Client";
 
-builder.Services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+        options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
@@ -66,13 +59,18 @@ builder.Services.AddAuthentication("Bearer")
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwtIssuer,
             ValidAudience = jwtAudience,
-            IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(jwtKey))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
     });
 builder.Services.AddAuthorization();
 
-builder.Services.AddSingleton<JwtTokenService>();
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Repository registrations
+builder.Services.AddScoped<IVanRepository, VanRepository>();
+
+builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<VanService>();
 builder.Services.AddScoped<DashboardService>();
@@ -80,22 +78,9 @@ builder.Services.AddScoped<ReviewService>();
 builder.Services.AddScoped<IncomeService>();
 builder.Services.AddScoped<ImageService>();
 builder.Services.AddScoped<RentalService>();
+builder.Services.AddSingleton<IEmailService, SmtpEmailService>();
+builder.Services.AddHostedService<RentalNotificationService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
-// Repositories
-builder.Services.AddScoped(typeof(VanLife.Api.Data.Repositories.IRepository<>), typeof(VanLife.Api.Data.Repositories.EfRepository<>));
-builder.Services.AddScoped<VanLife.Api.Data.Repositories.IVanRepository, VanLife.Api.Data.Repositories.VanRepository>();
-
-// health checks
-builder.Services.AddHealthChecks();
-
-// Configure automatic ModelState -> ProblemDetails behavior
-builder.Services.Configure<ApiBehaviorOptions>(options =>
-{
-    options.InvalidModelStateResponseFactory = context =>
-    {
-        return new BadRequestObjectResult(context.ModelState);
-    };
-});
 
 var app = builder.Build();
 
@@ -106,28 +91,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.Use(async (context, next) =>
-{
-    await next();
-    if (context.Response.StatusCode == StatusCodes.Status415UnsupportedMediaType && !context.Response.HasStarted)
-    {
-        context.Response.ContentType = "application/problem+json";
-        await context.Response.WriteAsJsonAsync(new
-        {
-            type = "https://tools.ietf.org/html/rfc9110#section-15.5.16",
-            title = "Unsupported Media Type",
-            status = StatusCodes.Status415UnsupportedMediaType,
-            traceId = Activity.Current?.Id ?? context.TraceIdentifier,
-            detail = "Request body must be valid JSON with Content-Type: application/json."
-        });
-    }
-});
-
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
-
-app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
 {

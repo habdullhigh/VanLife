@@ -6,40 +6,34 @@ using VanLife.Api.Models;
 
 namespace VanLife.Api.Services;
 
-public class JwtTokenService
+public class JwtTokenService(IConfiguration configuration)
 {
-    private readonly IConfiguration _configuration;
-
-    public JwtTokenService(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
-
     public string GenerateToken(UserAccount user)
     {
-        var key = _configuration["Jwt:Key"] ?? "VanLife-Dev-DEFAULT-KEY-Min-32-Chars-!";
-        var issuer = _configuration["Jwt:Issuer"] ?? "VanLife.Api";
-        var audience = _configuration["Jwt:Audience"] ?? "VanLife.Client";
-        var expiresMinutes = int.TryParse(_configuration["Jwt:ExpiresInMinutes"], out var m) ? m : 60;
+        var key = configuration["Jwt:Key"]
+            ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+        var issuer = configuration["Jwt:Issuer"] ?? "VanLife.Api";
+        var audience = configuration["Jwt:Audience"] ?? "VanLife.Client";
+        var expiresMinutes = int.TryParse(configuration["Jwt:ExpiresInMinutes"], out var minutes) ? minutes : 60;
 
-        var claims = new List<Claim>
+        var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Role, user.Role.ToString()),
-            new Claim(ClaimTypes.Name, user.Username ?? string.Empty)
+            new Claim(ClaimTypes.Role, user.Role.ToString())
         };
 
-        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
-        var creds = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+            SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
-            claims: claims,
+            issuer,
+            audience,
+            claims,
             expires: DateTime.UtcNow.AddMinutes(expiresMinutes),
-            signingCredentials: creds);
+            signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }

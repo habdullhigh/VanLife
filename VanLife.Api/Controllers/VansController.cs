@@ -20,51 +20,47 @@ public class VansController(VanService vanService) : ControllerBase
 
     [Authorize(Roles = nameof(UserRole.Seller))]
     [HttpGet("seller/vans")]
-    public async Task<IActionResult> GetSellerInventory([FromQuery] Guid? sellerId, [FromQuery] VanQuery query)
+    public async Task<IActionResult> GetSellerInventory([FromQuery] VanQuery query)
     {
         var userId = User.GetUserId();
-        var id = sellerId ?? userId;
-        if (id is null || id == Guid.Empty) return BadRequest(new { message = "sellerId is required." });
+        if (userId is null) return Unauthorized(new { message = "Invalid token." });
 
-        var vans = await vanService.GetSellerInventory(id.Value, query);
+        var vans = await vanService.GetSellerInventory(userId.Value, query);
         return Ok(vans);
     }
 
     [Authorize(Roles = nameof(UserRole.Seller))]
     [HttpPost("seller/vans")]
-    public async Task<IActionResult> CreateVan([FromQuery] Guid? sellerId, [FromBody] CreateVanRequest request)
+    public async Task<IActionResult> CreateVan([FromBody] CreateVanRequest request)
     {
         var userId = User.GetUserId();
-        var id = sellerId ?? userId;
-        if (id is null || id == Guid.Empty) return BadRequest(new { message = "sellerId is required." });
+        if (userId is null) return Unauthorized(new { message = "Invalid token." });
 
-        var result = await vanService.CreateVan(id.Value, request) as CreateResult;
+        var result = await vanService.CreateVan(userId.Value, request) as CreateResult;
         if (result is null) return BadRequest(new { message = "Could not create van." });
         return result.Success ? CreatedAtAction(nameof(GetOne), new { id = result.VanId }, result) : BadRequest(result);
     }
 
     [Authorize(Roles = nameof(UserRole.Seller))]
     [HttpPut("seller/vans/{id:guid}")]
-    public async Task<IActionResult> UpdateVan(Guid id, [FromQuery] Guid? sellerId, [FromBody] UpdateVanRequest request)
+    public async Task<IActionResult> UpdateVan(Guid id, [FromBody] UpdateVanRequest request)
     {
         var userId = User.GetUserId();
-        var sid = sellerId ?? userId;
-        if (sid is null || sid == Guid.Empty) return BadRequest(new { message = "sellerId is required." });
+        if (userId is null) return Unauthorized(new { message = "Invalid token." });
 
-        var result = await vanService.UpdateVan(sid.Value, id, request) as OperationResult;
+        var result = await vanService.UpdateVan(userId.Value, id, request) as OperationResult;
         if (result is null) return BadRequest(new { message = "Could not update van." });
         return result.Success ? Ok(result) : Forbid();
     }
 
     [Authorize(Roles = nameof(UserRole.Seller))]
     [HttpPatch("seller/vans/{id:guid}/availability")]
-    public async Task<IActionResult> UpdateAvailability(Guid id, [FromQuery] Guid? sellerId, [FromBody] UpdateAvailabilityRequest request)
+    public async Task<IActionResult> UpdateAvailability(Guid id, [FromBody] UpdateAvailabilityRequest request)
     {
         var userId = User.GetUserId();
-        var sid = sellerId ?? userId;
-        if (sid is null || sid == Guid.Empty) return BadRequest(new { message = "sellerId is required." });
+        if (userId is null) return Unauthorized(new { message = "Invalid token." });
 
-        var success = await vanService.UpdateAvailability(sid.Value, id, request.IsAvailable, request.NumberAvailable);
+        var success = await vanService.UpdateAvailability(userId.Value, id, request.IsAvailable, request.NumberAvailable);
         return success ? Ok(new { message = "Availability updated." }) : Forbid();
     }
 
@@ -78,23 +74,21 @@ public class VansController(VanService vanService) : ControllerBase
 
     [Authorize(Roles = nameof(UserRole.Seller))]
     [HttpGet("{id:guid}/management")]
-    public async Task<IActionResult> GetSellerVanDetails(Guid id, [FromQuery] Guid? sellerId)
+    public async Task<IActionResult> GetSellerVanDetails(Guid id)
     {
         var userId = User.GetUserId();
-        var sid = sellerId ?? userId;
-        if (sid is null || sid == Guid.Empty) return BadRequest(new { message = "sellerId is required." });
+        if (userId is null) return Unauthorized(new { message = "Invalid token." });
 
-        var van = await vanService.GetSellerVan(sid.Value, id);
+        var van = await vanService.GetSellerVan(userId.Value, id);
         return van is null ? Forbid() : Ok(van);
     }
 
     [Authorize(Roles = nameof(UserRole.Buyer))]
     [HttpPost("{id:guid}/rent")]
-    public async Task<IActionResult> Rent(Guid id, [FromQuery] Guid? buyerId, [FromBody] RentRequest request)
+    public async Task<IActionResult> Rent(Guid id, [FromBody] RentRequest request)
     {
-        var userId = User.GetUserId();
-        var bid = buyerId ?? userId;
-        if (bid is null || bid == Guid.Empty) return BadRequest(new { success = false, message = "buyerId is required." });
+        var buyerId = User.GetUserId();
+        if (buyerId is null) return Unauthorized(new { success = false, message = "Invalid token." });
 
         if (request.Days < 1)
         {
@@ -111,7 +105,7 @@ public class VansController(VanService vanService) : ControllerBase
             return BadRequest(new { success = false, message = "Contact information is required." });
         }
 
-        var result = await vanService.RentVan(id, bid.Value, request);
+        var result = await vanService.RentVan(id, buyerId.Value, request);
         return Ok(result);
     }
 }

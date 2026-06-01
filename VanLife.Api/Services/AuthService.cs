@@ -4,7 +4,7 @@ using VanLife.Api.Models;
 
 namespace VanLife.Api.Services;
 
-public class AuthService(AppDbContext db, JwtTokenService jwt)
+public class AuthService(AppDbContext db, JwtTokenService jwtTokenService)
 {
     public async Task<object> SignUp(SignUpRequest request)
     {
@@ -60,7 +60,7 @@ public class AuthService(AppDbContext db, JwtTokenService jwt)
             return new { success = false, message = "Invalid credentials for this login type." };
         }
 
-        var token = jwt.GenerateToken(user);
+        var token = jwtTokenService.GenerateToken(user);
 
         return new
         {

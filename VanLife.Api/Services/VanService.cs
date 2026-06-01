@@ -271,6 +271,18 @@ public class VanService
             EndDate = end
         });
 
+        // store payment consent and token for potential auto-charges
+        var createdRental = await db.Rentals.OrderByDescending(r => r.PurchasedAt).FirstOrDefaultAsync(r => r.BuyerId == buyer.Id && r.VanId == van.Id && r.PurchasedAt > DateTime.UtcNow.AddMinutes(-1));
+        if (createdRental is not null)
+        {
+            createdRental.AcceptsAutoCharge = request.AcceptsAutoCharge;
+            createdRental.PaymentToken = request.PaymentToken;
+            createdRental.FineRate = 1000m;
+            createdRental.FineCurrency = "Naira";
+            createdRental.FineInterval = "per_day";
+            createdRental.FineGraceDays = 1;
+        }
+
         db.Transactions.Add(new Transaction
         {
             Id = Guid.NewGuid(),

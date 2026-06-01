@@ -137,5 +137,27 @@ public class Rental
     // Rental period start and end (inclusive)
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
+    // Returned at timestamp (null when still out)
+    public DateTime? ReturnedAt { get; set; }
+
+    // Fine-related fields
+    // Current calculated fine (updated daily while overdue)
+    public decimal FineAmount { get; set; }
+    // Per-day fine rate (default 1000)
+    public decimal FineRate { get; set; } = 1000m;
+    // Currency for the fine
+    public string FineCurrency { get; set; } = "Naira";
+    // Interval description
+    public string FineInterval { get; set; } = "per_day";
+    // Grace days after EndDate before fines are applied (not communicated)
+    public int FineGraceDays { get; set; } = 1;
+    // Whether fines are frozen (e.g., once returned)
+    public bool FineFrozen { get; set; }
+    // If seller waived the fine
+    public bool FineWaived { get; set; }
+    // Whether automatic charges were accepted by the buyer
+    public bool AcceptsAutoCharge { get; set; }
+    // Payment token stored for charging fines if accepted (for demo purposes)
+    public string? PaymentToken { get; set; }
 }
 
