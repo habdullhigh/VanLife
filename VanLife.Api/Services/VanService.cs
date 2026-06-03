@@ -1,16 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using VanLife.Api.Data;
+using VanLife.Api.Data.Repositories;
 using VanLife.Api.Models;
 
 namespace VanLife.Api.Services;
 
 public class VanService
 {
+    private readonly IVanRepository vanRepo;
     private readonly AppDbContext db;
     private readonly IPaymentService payments;
 
-    public VanService(AppDbContext db, IPaymentService payments)
+    public VanService(IVanRepository vanRepo, AppDbContext db, IPaymentService payments)
     {
+        this.vanRepo = vanRepo;
         this.db = db;
         this.payments = payments;
     }
@@ -76,7 +79,7 @@ public class VanService
 
     public async Task<VanDetailsDto?> GetById(Guid id)
     {
-        var van = await db.Vans.FirstOrDefaultAsync(v => v.Id == id);
+        var van = await vanRepo.GetByIdWithPhotosAsync(id);
         return van is null
             ? null
             : new VanDetailsDto(van.Id, van.Name, van.PricePerDay, van.FullDescription, van.IsAvailable, van.NumberAvailable);
@@ -87,12 +90,10 @@ public class VanService
         var isSeller = await db.Users.AnyAsync(u => u.Id == sellerId && u.Role == UserRole.Seller);
         if (!isSeller) return null;
 
-        var van = await db.Vans
-            .Include(v => v.Photos)
-            .FirstOrDefaultAsync(v => v.Id == vanId && v.SellerId == sellerId);
-        return van is null
-            ? null
-            : new SellerVanDetailsDto(van.Id, van.Name, van.Category, van.FullDescription, van.IsVisible, van.PricePerDay, van.Photos.Select(x => x.Url).ToList());
+        var van = await vanRepo.GetByIdWithPhotosAsync(vanId);
+        if (van is null || van.SellerId != sellerId) return null;
+
+        return new SellerVanDetailsDto(van.Id, van.Name, van.Category, van.FullDescription, van.IsVisible, van.PricePerDay, van.Photos.Select(x => x.Url).ToList());
     }
 
     public async Task<object> CreateVan(Guid sellerId, CreateVanRequest request)
@@ -117,8 +118,8 @@ public class VanService
             SellerId = sellerId
         };
 
-        db.Vans.Add(van);
-        await db.SaveChangesAsync();
+        await vanRepo.AddAsync(van);
+        await vanRepo.SaveChangesAsync();
 
         return new CreateResult(true, "Van created.", van.Id);
     }
@@ -131,8 +132,8 @@ public class VanService
             return new { success = false, message = "Seller not found or not authorized." };
         }
 
-        var van = await db.Vans.FirstOrDefaultAsync(v => v.Id == vanId && v.SellerId == sellerId);
-        if (van is null)
+        var van = await vanRepo.GetByIdWithPhotosAsync(vanId);
+        if (van is null || van.SellerId != sellerId)
         {
             return new { success = false, message = "Van not found or not owned by seller." };
         }
@@ -152,7 +153,8 @@ public class VanService
         }
         if (request.IsVisible.HasValue) van.IsVisible = request.IsVisible.Value;
 
-        await db.SaveChangesAsync();
+        vanRepo.Update(van);
+        await vanRepo.SaveChangesAsync();
         return new OperationResult(true, "Van updated.");
     }
 
@@ -161,8 +163,8 @@ public class VanService
         var isSeller = await db.Users.AnyAsync(u => u.Id == sellerId && u.Role == UserRole.Seller);
         if (!isSeller) return false;
 
-        var van = await db.Vans.FirstOrDefaultAsync(v => v.Id == vanId && v.SellerId == sellerId);
-        if (van is null) return false;
+        var van = await vanRepo.GetByIdWithPhotosAsync(vanId);
+        if (van is null || van.SellerId != sellerId) return false;
 
         van.IsAvailable = isAvailable;
         if (numberAvailable.HasValue)
@@ -170,7 +172,8 @@ public class VanService
             if (numberAvailable.Value < 0) return false;
             van.NumberAvailable = numberAvailable.Value;
         }
-        await db.SaveChangesAsync();
+        vanRepo.Update(van);
+        await vanRepo.SaveChangesAsync();
         return true;
     }
 
@@ -186,7 +189,7 @@ public class VanService
 
     public async Task<object> RentVan(Guid vanId, Guid buyerId, RentRequest request)
     {
-        var van = await db.Vans.FirstOrDefaultAsync(v => v.Id == vanId);
+        var van = await vanRepo.GetByIdWithPhotosAsync(vanId);
         if (van is null)
         {
             return new { success = false, message = "Van not found." };
@@ -267,6 +270,18 @@ public class VanService
             StartDate = start,
             EndDate = end
         });
+
+        // store payment consent and token for potential auto-charges
+        var createdRental = await db.Rentals.OrderByDescending(r => r.PurchasedAt).FirstOrDefaultAsync(r => r.BuyerId == buyer.Id && r.VanId == van.Id && r.PurchasedAt > DateTime.UtcNow.AddMinutes(-1));
+        if (createdRental is not null)
+        {
+            createdRental.AcceptsAutoCharge = request.AcceptsAutoCharge;
+            createdRental.PaymentToken = request.PaymentToken;
+            createdRental.FineRate = 1000m;
+            createdRental.FineCurrency = "Naira";
+            createdRental.FineInterval = "per_day";
+            createdRental.FineGraceDays = 1;
+        }
 
         db.Transactions.Add(new Transaction
         {

@@ -9,13 +9,16 @@ namespace VanLife.Api.Controllers;
 [Route("api/images")]
 public class ImagesController(ImageService imageService) : ControllerBase
 {
-    [AllowAnonymous]
+    [Authorize(Roles = nameof(UserRole.Seller))]
     [HttpPost("upload")]
-    public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] Guid? vanId)
+    public async Task<IActionResult> Upload([FromQuery] string fileName, [FromQuery] Guid? vanId)
     {
-        if (file is null || file.Length == 0) return BadRequest(new { message = "file is required." });
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return BadRequest(new { message = "fileName is required." });
+        }
 
-        var image = await imageService.Upload(file, vanId);
+        var image = await imageService.Upload(fileName, vanId);
         return Ok(image);
     }
 
@@ -23,6 +26,7 @@ public class ImagesController(ImageService imageService) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] PaginationQuery query) => Ok(await imageService.GetAll(query));
 
+    [Authorize(Roles = nameof(UserRole.Seller))]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id)
     {

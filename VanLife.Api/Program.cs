@@ -1,10 +1,11 @@
 using System.Text;
-using System.Diagnostics;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.Mvc;
 using VanLife.Api.Data;
+using VanLife.Api.Data.Repositories;
 using VanLife.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,13 +16,61 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter a valid JWT token."
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
-// JWT authentication removed - authentication/authorization middleware is not used.
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "VanLife.Api";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "VanLife.Client";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+    });
+builder.Services.AddAuthorization();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Repository registrations
+builder.Services.AddScoped<IVanRepository, VanRepository>();
+
+builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<VanService>();
 builder.Services.AddScoped<DashboardService>();
@@ -29,19 +78,9 @@ builder.Services.AddScoped<ReviewService>();
 builder.Services.AddScoped<IncomeService>();
 builder.Services.AddScoped<ImageService>();
 builder.Services.AddScoped<RentalService>();
+builder.Services.AddSingleton<IEmailService, SmtpEmailService>();
+builder.Services.AddHostedService<RentalNotificationService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
-
-// health checks
-builder.Services.AddHealthChecks();
-
-// Configure automatic ModelState -> ProblemDetails behavior
-builder.Services.Configure<ApiBehaviorOptions>(options =>
-{
-    options.InvalidModelStateResponseFactory = context =>
-    {
-        return new BadRequestObjectResult(context.ModelState);
-    };
-});
 
 var app = builder.Build();
 
@@ -52,28 +91,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.Use(async (context, next) =>
-{
-    await next();
-    if (context.Response.StatusCode == StatusCodes.Status415UnsupportedMediaType && !context.Response.HasStarted)
-    {
-        context.Response.ContentType = "application/problem+json";
-        await context.Response.WriteAsJsonAsync(new
-        {
-            type = "https://tools.ietf.org/html/rfc9110#section-15.5.16",
-            title = "Unsupported Media Type",
-            status = StatusCodes.Status415UnsupportedMediaType,
-            traceId = Activity.Current?.Id ?? context.TraceIdentifier,
-            detail = "Request body must be valid JSON with Content-Type: application/json."
-        });
-    }
-});
-
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
-
-app.MapHealthChecks("/health");
 
 using (var scope = app.Services.CreateScope())
 {

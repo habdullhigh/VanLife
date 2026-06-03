@@ -56,6 +56,8 @@ public class RentRequest
     // Payment token or method identifier (in production integrate with payment gateway)
     [Required]
     public string PaymentToken { get; set; } = string.Empty;
+    // Whether buyer agrees to automatic charges for fines. If false, rental is voided.
+    public bool AcceptsAutoCharge { get; set; } = true;
     // Caution fee amount provided by renter
     public decimal CautionFee { get; set; }
 }

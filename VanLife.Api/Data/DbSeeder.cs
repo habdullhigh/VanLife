@@ -69,12 +69,7 @@ public static class DbSeeder
             SellerId = sellerId,
             BuyerId = buyerId,
             VanId = van1.Id,
-            PurchasedAt = DateTime.UtcNow.AddDays(-10),
-            Days = 3,
-            Destination = "Lagos",
-            Contact = "555-0002",
-            CautionFee = 50,
-            TotalPaid = 230
+            PurchasedAt = DateTime.UtcNow.AddDays(-10)
         });
 
         db.Transactions.AddRange(
